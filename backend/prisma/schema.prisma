@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  picture   String?
+  googleId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recipes         Recipe[]
+  inventory       InventoryItem[]
+  scheduledMeals  ScheduledMeal[]
+  shoppingLists   ShoppingList[]
+}
+
+model Recipe {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?
+  instructions String?
+  isPublic     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  authorId     String
+  author       User     @relation(fields: [authorId], references: [id])
+  
+  ingredients  RecipeIngredient[]
+  scheduled    ScheduledMeal[]
+}
+
+model Ingredient {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  defaultUnit String   @default("units")
+  createdAt   DateTime @default(now())
+
+  recipes     RecipeIngredient[]
+  inventory   InventoryItem[]
+  shopping    ShoppingListItem[]
+}
+
+model RecipeIngredient {
+  id           String   @id @default(uuid())
+  recipeId     String
+  ingredientId String
+  quantity     Float
+  unit         String
+
+  recipe       Recipe     @relation(fields: [recipeId], references: [id])
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@unique([recipeId, ingredientId])
+}
+
+model InventoryItem {
+  id           String   @id @default(uuid())
+  userId       String
+  ingredientId String
+  quantity     Float
+  unit         String
+  barcode      String?  @unique
+
+  user         User       @relation(fields: [userId], references: [id])
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@unique([userId, ingredientId])
+}
+
+model ScheduledMeal {
+  id       String   @id @default(uuid())
+  userId   String
+  recipeId String
+  date     DateTime
+  mealType String   // e.g. 'breakfast', 'lunch', 'dinner'
+
+  user     User   @relation(fields: [userId], references: [id])
+  recipe   Recipe @relation(fields: [recipeId], references: [id])
+}
+
+model ShoppingList {
+  id        String   @id @default(uuid())
+  userId    String
+  status    String   @default("active") // active, completed
+  createdAt DateTime @default(now())
+
+  user      User               @relation(fields: [userId], references: [id])
+  items     ShoppingListItem[]
+}
+
+model ShoppingListItem {
+  id             String   @id @default(uuid())
+  shoppingListId String
+  ingredientId   String
+  quantity       Float
+  unit           String
+  isPurchased    Boolean  @default(false)
+
+  shoppingList   ShoppingList @relation(fields: [shoppingListId], references: [id])
+  ingredient     Ingredient   @relation(fields: [ingredientId], references: [id])
+
+  @@unique([shoppingListId, ingredientId])
+}
